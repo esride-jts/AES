@@ -10,6 +10,6 @@ include_directories(${GTEST_INCLUDE_DIR})
 add_executable(tests
     AES.cpp
     tests.cpp
-    )
+     "base64.h")
 
 target_link_libraries(tests ${GTEST_LIBRARIES})

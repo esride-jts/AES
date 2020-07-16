@@ -256,6 +256,34 @@ TEST(CFB, DecryptTwoBlocks)
 }
 
 
+#include "base64.h"
+TEST(SDA, EncryptDecryptSDA)
+{
+    AES aes(256);
+    std::string plain_string = "Lets encrpyt and decrypt this string awesome AES!!!";
+
+    unsigned char* plain = to_bytes(plain_string);
+    // Heap corruption by delete[] innew
+    unsigned int bytes_length = 256; // strlen(reinterpret_cast<char*>(plain));
+
+    std::string test = from_bytes(plain);
+    unsigned char iv[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+    unsigned char key[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11,
+      0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f };
+    unsigned int len;
+
+    unsigned char* out = aes.EncryptCBC(plain, bytes_length, key, iv, len);
+    unsigned char* innew = aes.DecryptCBC(out, bytes_length, key, iv);
+    ASSERT_FALSE(memcmp(innew, plain, bytes_length));
+
+    std::string result_string = from_bytes(innew);
+
+    delete[] out;
+    delete[] innew;
+    delete[] plain;
+}
+
+
 int main(int argc, char *argv[])
 {
 	::testing::InitGoogleTest(&argc, argv);
