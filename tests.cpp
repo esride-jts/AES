@@ -259,12 +259,17 @@ TEST(CFB, DecryptTwoBlocks)
 #include "base64.h"
 TEST(SDA, EncryptDecryptSDA)
 {
-    AES aes(256);
+    unsigned int bytes_length = 256;
+    AES aes(bytes_length);
     std::string plain_string = "Lets encrypt and decrypt this string awesome AES!!!";
+    std::size_t text_length = plain_string.length();
+    // You have to pad, otherwise heap corruption by delete[] innew
+    for (int padIndex = text_length; padIndex < bytes_length; padIndex++)
+    {
+        plain_string += '0';
+    }
 
     unsigned char* plain = to_bytes(plain_string);
-    // Heap corruption by delete[] innew
-    unsigned int bytes_length = 256; // strlen(reinterpret_cast<char*>(plain));
 
     unsigned char* iv = to_bytes("12345678-1234-12");
     unsigned char* key = to_bytes("12345678-1234-1234-1234-12345678");
@@ -272,15 +277,17 @@ TEST(SDA, EncryptDecryptSDA)
 
     unsigned char* out = aes.EncryptCBC(plain, bytes_length, key, iv, len);
     //std::string out_base64 = base64_encode(from_bytes(out));
+    std::string out_base64 = base64_encode(plain_string);
     //delete[] out;
 
-    //std::string out_text = base64_decode(out_base64);
+    std::string out_text = base64_decode(out_base64);
     //out = to_bytes(out_text);
 
     unsigned char* innew = aes.DecryptCBC(out, bytes_length, key, iv);
     ASSERT_FALSE(memcmp(innew, plain, bytes_length));
 
     std::string result_string = from_bytes(innew);
+    result_string.erase(text_length);
 
     delete[] out;
     delete[] innew;
