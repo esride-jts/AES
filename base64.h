@@ -8,6 +8,22 @@ static std::string from_bytes(unsigned char* bytes) {
     return std::string(reinterpret_cast<char*>(bytes));
 }
 
+static std::string from_latin1(std::string& text) {
+    std::string utf_out;
+    for (std::string::iterator it = text.begin(); it != text.end(); ++it)
+    {
+        uint8_t ch = *it;
+        if (ch < 0x80) {
+            utf_out.push_back(ch);
+        }
+        else {
+            utf_out.push_back(0xc0 | ch >> 6);
+            utf_out.push_back(0x80 | (ch & 0x3f));
+        }
+    }
+    return utf_out;
+}
+
 static std::string base64_encode(const std::string& in) {
 
     std::string out;

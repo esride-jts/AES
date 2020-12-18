@@ -257,17 +257,19 @@ TEST(CFB, DecryptTwoBlocks)
 
 
 #include "base64.h"
-TEST(SDA, EncryptDecryptSDA)
+#include <codecvt>
+#include <fstream>
+#include <locale>
+#include <sstream>
+
+TEST(SDA1, EncryptDecryptFromMemory)
 {
     unsigned int bytes_length = 256;
     AES aes(bytes_length);
-    std::string plain_string = "Lets encrypt and decrypt this string awesome AES!!!";
+    
+    std::string plain_string = "{ \"Id\": \"ID-123-456-789\", \"Type\": 3, \"CreationDate\": \"2020.12.18\" }";
     std::size_t text_length = plain_string.length();
-    // You have to pad, otherwise heap corruption by delete[] innew
-    for (int padIndex = text_length; padIndex < bytes_length; padIndex++)
-    {
-        plain_string += '0';
-    }
+    plain_string.append(bytes_length - text_length, '0');
 
     unsigned char* plain = to_bytes(plain_string);
 
@@ -275,13 +277,16 @@ TEST(SDA, EncryptDecryptSDA)
     unsigned char* key = to_bytes("12345678-1234-1234-1234-12345678");
     unsigned int len;
 
-    unsigned char* out = aes.EncryptCBC(plain, bytes_length, key, iv, len);
-    //std::string out_base64 = base64_encode(from_bytes(out));
-    std::string out_base64 = base64_encode(plain_string);
-    //delete[] out;
+    unsigned char* in = aes.EncryptCBC(plain, bytes_length, key, iv, len);
+    std::string in_base64 = base64_encode(from_bytes(in));
 
-    std::string out_text = base64_decode(out_base64);
-    //out = to_bytes(out_text);
+    std::string out_text = base64_decode(in_base64);
+    unsigned char* out = to_bytes(out_text);
+
+    std::cout << plain_string.length() << std::endl;
+    std::cout << out_text.length() << std::endl;
+    std::cout << plain_string << std::endl;
+    std::cout << out_text << std::endl;
 
     unsigned char* innew = aes.DecryptCBC(out, bytes_length, key, iv);
     ASSERT_FALSE(memcmp(innew, plain, bytes_length));
@@ -289,9 +294,40 @@ TEST(SDA, EncryptDecryptSDA)
     std::string result_string = from_bytes(innew);
     result_string.erase(text_length);
 
+    delete[] in;
     delete[] out;
     delete[] innew;
     delete[] plain;
+}
+
+TEST(SDA, DecryptFromFile)
+{
+    unsigned int bytes_length = 256;
+    AES aes(bytes_length);
+
+    unsigned char* iv = to_bytes("12345678-1234-12");
+    unsigned char* key = to_bytes("12345678-1234-1234-1234-12345678");
+
+    std::wifstream in_stream("Latin1File.bin");
+    if (in_stream)
+    {
+        in_stream.ignore(2);
+        std::wstringstream in_stringstream;
+        in_stringstream << in_stream.rdbuf();
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        std::string in_base64 = converter.to_bytes(in_stringstream.str());
+
+        std::string in_text = base64_decode(in_base64);
+        unsigned char* in = to_bytes(in_text);
+
+        unsigned char* result = aes.DecryptCBC(in, in_text.length(), key, iv);
+
+        std::string result_string = from_bytes(result);
+        std::cout << result_string;
+
+        delete[] in;
+        delete[] result;
+    }
 }
 
 
